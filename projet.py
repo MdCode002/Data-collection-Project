@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import requests
 from bs4 import BeautifulSoup as bs
-
+import plotly.express as px
 
 def Scrapping(Categorie, Nombre_de_pages,type_catg):
     df = pd.DataFrame()
@@ -54,15 +54,149 @@ st.sidebar.title("Navigation")
 option = st.sidebar.selectbox(
     "Choisissez une option :",
     [
+        "Dashboard",
         "Scraper des données",
         "Visualiser les données scrapées",
         "Remplir le formulaire d'évaluation"
     ]
 )
 
+
 st.title("MINI projet DC - Mouhamed Diouf")
+# Dashboard (graphiques)
+# Dashboard (graphiques)
+if option == "Dashboard":
+    st.subheader("Dashboard des données scrapées")
+    fichiers = [
+        'data/coinafrique-vetements-homme.csv',
+        'data/coinafrique-chaussures-homme.csv',
+        'data/coinafrique-vetements-enfants.csv',
+        'data/coinafrique-chaussures-enfants.csv',
+    ]
+    dataframes = []
+    for fichier in fichiers:
+        if os.path.exists(fichier):
+            df_temp = pd.read_csv(fichier)
+            df_temp["source"] = os.path.basename(fichier).replace("coinafrique-", "").replace(".csv", "")
+            dataframes.append(df_temp)
+    
+    if dataframes:
+        df = pd.concat(dataframes, ignore_index=True)
+        
+        # Nettoyage des prix amélioré
+        def nettoyer_prix(val):
+            if pd.isna(val) or val == "sur demande" or val == "":
+                return None
+            if isinstance(val, str):
+                # Nettoyer les prix en supprimant CFA, espaces, points et virgules
+                val = val.replace("CFA", "").replace(" ", "").replace(".", "").replace(",", "")
+                try:
+                    return float(val)
+                except:
+                    return None
+            elif isinstance(val, (int, float)):
+                return float(val)
+            return None
+        
+        df["prix_clean"] = df["prix"].apply(nettoyer_prix)
+        
+        # Affichage des statistiques générales
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total articles", len(df))
+        with col2:
+            st.metric("Articles avec prix", len(df[df["prix_clean"].notna()]))
+        with col3:
+            prix_valides = df["prix_clean"].dropna()
+            if not prix_valides.empty:
+                st.metric("Prix moyen", f"{prix_valides.mean():,.0f} CFA")
+            else:
+                st.metric("Prix moyen", "N/A")
+        with col4:
+            st.metric("Sources", df["source"].nunique())
+        
+        #  Répartition des types d'articles (plus lisible)
+        st.write("### Répartition des types d'articles")
+        type_counts = df["type"].value_counts()
+        if len(type_counts) > 15:
+            type_counts = type_counts.head(15)
+            st.info(f"Affichage des 15 types les plus fréquents sur {df['type'].nunique()} types total")
+        
+        fig1 = px.bar(
+            x=type_counts.index,
+            y=type_counts.values,
+            title="Répartition des types d'articles",
+            labels={'x': 'Type d\'article', 'y': 'Nombre d\'annonces'}
+        )
+        fig1.update_layout(xaxis_tickangle=-45, height=500)
+        st.plotly_chart(fig1, use_container_width=True)
+        
+        #  Répartition géographique 
+        st.write("### Top 10 des zones avec le plus d'annonces")
+        adresse_counts = df["adresse"].value_counts().head(10)
+        
+        fig2 = px.bar(
+            x=adresse_counts.values,
+            y=adresse_counts.index,
+            orientation='h',
+            title="Top 10 des zones géographiques",
+            labels={'x': 'Nombre d\'annonces', 'y': 'Zone'}
+        )
+        fig2.update_layout(height=400)
+        st.plotly_chart(fig2, use_container_width=True)
+        
+        #  Distribution des prix (améliorée)
+        st.write("### Analyse des prix")
+        prix_valides = df["prix_clean"].dropna()
+        
+        if not prix_valides.empty:
+            # Statistiques des prix
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("**Statistiques des prix:**")
+                st.write(f"- Prix minimum: {prix_valides.min():,.0f} CFA")
+                st.write(f"- Prix maximum: {prix_valides.max():,.0f} CFA")
+                st.write(f"- Prix médian: {prix_valides.median():,.0f} CFA")
+                st.write(f"- Écart-type: {prix_valides.std():,.0f} CFA")
+            
+            with col2:
+                # Filtrer les prix aberrants pour une meilleure visualisation
+                q1 = prix_valides.quantile(0.25)
+                q3 = prix_valides.quantile(0.75)
+                iqr = q3 - q1
+                prix_filtered = prix_valides[
+                    (prix_valides >= q1 - 1.5 * iqr) & 
+                    (prix_valides <= q3 + 1.5 * iqr)
+                ]
+                
+                if len(prix_filtered) > 0:
+                    st.write("**Distribution (sans valeurs aberrantes):**")
+                    fig3 = px.histogram(
+                        x=prix_filtered,
+                        nbins=30,
+                        title="Distribution des prix",
+                        labels={'x': 'Prix (CFA)', 'y': 'Nombre d\'articles'}
+                    )
+                    st.plotly_chart(fig3, use_container_width=True)
+            
+        
+        # Articles par source
+        st.write("### Répartition des articles par source")
+        source_counts = df["source"].value_counts()
+        
+        fig5 = px.pie(
+            values=source_counts.values,
+            names=source_counts.index,
+            title="Répartition des articles par source"
+        )
+        st.plotly_chart(fig5, use_container_width=True)
+        
+      
+        
+    else:
+        st.error("Aucune donnée trouvée. Merci de scraper ou visualiser des données d'abord.")
 # Scraper des données
-if option == "Scraper des données":
+elif option == "Scraper des données":
     st.subheader("Scraping des données")
     
     nombre_pages = st.sidebar.slider("Nombre de pages à scraper :", 1, 20, 1)
