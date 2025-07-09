@@ -63,8 +63,7 @@ option = st.sidebar.selectbox(
 
 
 st.title("MINI projet DC - Mouhamed Diouf")
-# Dashboard (graphiques)
-# Dashboard (graphiques)
+# Dashboard 
 if option == "Dashboard":
     st.subheader("Dashboard des données scrapées")
     fichiers = [
@@ -100,20 +99,7 @@ if option == "Dashboard":
         
         df["prix_clean"] = df["prix"].apply(nettoyer_prix)
         
-        # Affichage des statistiques générales
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total articles", len(df))
-        with col2:
-            st.metric("Articles avec prix", len(df[df["prix_clean"].notna()]))
-        with col3:
-            prix_valides = df["prix_clean"].dropna()
-            if not prix_valides.empty:
-                st.metric("Prix moyen", f"{prix_valides.mean():,.0f} CFA")
-            else:
-                st.metric("Prix moyen", "N/A")
-        with col4:
-            st.metric("Sources", df["source"].nunique())
+       
         
         #  Répartition des types d'articles
         st.write("### Répartition des types d'articles")
@@ -170,7 +156,6 @@ if option == "Dashboard":
                 ]
                 
                 if len(prix_filtered) > 0:
-                    st.write("**Distribution **")
                     fig3 = px.histogram(
                         x=prix_filtered,
                         nbins=30,
