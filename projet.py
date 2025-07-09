@@ -88,7 +88,7 @@ if option == "Dashboard":
             if pd.isna(val) or val == "sur demande" or val == "":
                 return None
             if isinstance(val, str):
-                # Nettoyer les prix en supprimant CFA, espaces, points et virgules
+                
                 val = val.replace("CFA", "").replace(" ", "").replace(".", "").replace(",", "")
                 try:
                     return float(val)
@@ -115,7 +115,7 @@ if option == "Dashboard":
         with col4:
             st.metric("Sources", df["source"].nunique())
         
-        #  Répartition des types d'articles (plus lisible)
+        #  Répartition des types d'articles
         st.write("### Répartition des types d'articles")
         type_counts = df["type"].value_counts()
         if len(type_counts) > 15:
@@ -170,7 +170,7 @@ if option == "Dashboard":
                 ]
                 
                 if len(prix_filtered) > 0:
-                    st.write("**Distribution (sans valeurs aberrantes):**")
+                    st.write("**Distribution **")
                     fig3 = px.histogram(
                         x=prix_filtered,
                         nbins=30,
